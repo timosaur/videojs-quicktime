@@ -56,7 +56,7 @@ videojs.Quicktime = videojs.MediaTechController.extend({
     console.log("controls", this.player_.controls());
     console.log("controls", this.player_.controlBar);
     // window.controlbar = this.player_.controlBar.el();
-    window.player = this.player_;
+    window.player = this;
     // Disable lockShowing because YouTube controls are there
     // if (this.player_.options().ytcontrols){
     //   this.player_.controls(false);
@@ -156,7 +156,7 @@ videojs.Quicktime = videojs.MediaTechController.extend({
         var txt = _QTGenerate("QT_WriteOBJECT", false, arguments);
         return txt;
     }
-    var objectstring = makeQT(player.options().src, player.options().width, player.options().height, '', 'SCALE', 'tofit', 'obj#ID', 'video', 'emb#name', 'video', 'postdomevents', 'true', 'enablejavascript', 'true') ;
+    var objectstring = makeQT(player.options().src, player.options().width, player.options().height, '', 'SCALE', 'tofit', 'obj#ID', 'video', 'emb#name', 'video', 'postdomevents', 'true', 'enablejavascript', 'true', 'autoplay', 'false') ;
     console.log(objectstring);
 
     var quicktime_player = document.createElement("div");
@@ -198,8 +198,7 @@ videojs.Quicktime.prototype.play = function(){
 
 videojs.Quicktime.prototype.pause = function(){ this.qtplayer.Stop(); };
 videojs.Quicktime.prototype.paused = function(){
-  return this.lastState !== YT.PlayerState.PLAYING &&
-         this.lastState !== YT.PlayerState.BUFFERING;
+  return this.qtplayer.GetRate() == 0;
 };
 
 videojs.Quicktime.prototype.currentTime = function(){
@@ -228,17 +227,15 @@ videojs.Quicktime.prototype.buffered = function(){
   return videojs.createTimeRange(secondsOffset, secondsOffset + secondsBuffered);
 };
 
-videojs.Quicktime.prototype.volume = function() { 
-  if (isNaN(this.volumeVal)) {
-    this.volumeVal = this.qtplayer.GetVolume();
-  }
+videojs.Quicktime.prototype.volume = function() {
+  this.volumeVal = this.qtplayer.GetVolume()/256.0;
   console.log("Volume", this.volumeVal);
   return this.volumeVal;
 };
 
 videojs.Quicktime.prototype.setVolume = function(percentAsDecimal){
   if (percentAsDecimal && percentAsDecimal != this.volumeVal) {
-    this.ytplayer.setVolume(percentAsDecimal * 100.0); 
+    this.qtplayer.SetVolume(percentAsDecimal * 256.0);
     this.volumeVal = percentAsDecimal;
     this.player_.trigger('volumechange');
   }
@@ -250,9 +247,9 @@ videojs.Quicktime.prototype.muted = function() {
 };
 videojs.Quicktime.prototype.setMuted = function(muted) { 
   if (muted) {
-    this.ytplayer.mute(); 
+    this.qtplayer.SetMute(true); 
   } else { 
-    this.ytplayer.unMute(); 
+    this.qtplayer.SetMute(false); 
   } 
 
   var self = this;
