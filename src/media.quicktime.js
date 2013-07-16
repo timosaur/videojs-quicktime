@@ -201,26 +201,26 @@ videojs.Quicktime.prototype.paused = function(){
   return this.qtplayer.GetRate() == 0;
 };
 
-videojs.Quicktime.prototype.currentTime = function(){
+videojs.Quicktime.prototype.currentTime = function(seconds){
   console.log("Current Time", this.qtplayer.GetTime());
-  return this.qtplayer.GetTime();
+  return this.qtplayer.GetTime() / this.qtplayer.GetTimeScale();
 };
 
 videojs.Quicktime.prototype.setCurrentTime = function(seconds){
-  this.qtplayer.SetTime(seconds);
+  this.qtplayer.SetTime(seconds * this.qtplayer.GetTimeScale());
   this.player_.trigger('timeupdate');
 };
 
 videojs.Quicktime.prototype.duration = function(){
-  console.log("Duration", this.qtplayer.GetDuration());
-  return this.qtplayer.GetDuration();
+  console.log("Duration", this.qtplayer.GetDuration() / this.qtplayer.GetTimeScale());
+  return this.qtplayer.GetDuration() / this.qtplayer.GetTimeScale();
 };
 videojs.Quicktime.prototype.buffered = function(){
   var loadedBytes = this.qtplayer.GetMaxBytesLoaded();
   var totalBytes = this.qtplayer.GetMovieSize();
   if (!loadedBytes || !totalBytes) return 0;
 
-  var duration = this.qtplayer.GetDuration();
+  var duration = this.qtplayer.GetDuration() / this.qtplayer.GetTimeScale();
   var secondsBuffered = (loadedBytes / totalBytes) * duration;
   // var secondsOffset = (this.qtplayer.getVideoStartBytes() / totalBytes) * duration;
   var secondsOffset = 0;
