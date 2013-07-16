@@ -150,7 +150,24 @@ videojs.Quicktime = videojs.MediaTechController.extend({
 
     // this.loadQuicktime();
 
-    // Load quicktime object
+    // Load quicktime object 
+    function makeQT()
+    {
+        var txt = _QTGenerate("QT_WriteOBJECT", false, arguments);
+        return txt;
+    }
+    var objectstring = makeQT(player.options().src, player.options().width, player.options().height, '', 'SCALE', 'tofit', 'obj#ID', 'video', 'emb#name', 'video', 'postdomevents', 'true', 'enablejavascript', 'true') ;
+    console.log(objectstring);
+
+    var quicktime_player = document.createElement("div");
+    quicktime_player.innerHTML = objectstring;
+
+    console.log(this.player_el_.firstchild);
+    
+    // this.player_el_.insertBefore(quicktime_player[0], this.player_el_.firstChild);
+    this.player_el_.innerHTML = objectstring;
+
+
     this.qtplayer = document.video;
     // console.log("qtplayer", this.qtplayer);
 
