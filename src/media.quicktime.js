@@ -1,9 +1,9 @@
 /**
- * @fileoverview YouTube Media Controller - Wrapper for YouTube Media API
+ * @fileoverview Quicktime Media Controller - Wrapper for Quicktime player
  */
 
 /**
- * YouTube Media Controller - Wrapper for YouTube Media API
+ * Quicktime Media Controller - Wrapper for Quicktime player
  * @param {videojs.Player|Object} player
  * @param {Object=} options
  * @param {Function=} ready
@@ -44,6 +44,7 @@ videojs.Quicktime = videojs.MediaTechController.extend({
     //   }, 50);
     // }
 
+    this.parent_el_ = options['parentEl'];
     this.loadQuicktime();
   }
 });
@@ -149,8 +150,9 @@ videojs.Quicktime.prototype.onReady = function(){
   this.isReady_ = true;
   this.player_.trigger('techready');
 
-  // Hide the poster when ready because YouTube has it's own
   this.triggerReady();
+
+  // Hide the poster when ready because YouTube has it's own
   this.player_.trigger('durationchange');
 
   // Play right away if we clicked before ready
