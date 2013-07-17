@@ -193,10 +193,12 @@ videojs.Quicktime.prototype.loadQuicktime = function(){
   );
   console.log(qt_object);
 
-  this.parent_el_.innerHTML = qt_object;
+  var placeHolder = document.createElement('div');
+  placeHolder.innerHTML = qt_object;
 
   // Set element object
-  this.el_ = this.parent_el_.firstChild;
+  this.el_ = placeHolder.firstChild;
+  this.parent_el_.appendChild(this.el_);
   // Get video embed in object
   this.qtplayer = this.el_.lastChild;
 
