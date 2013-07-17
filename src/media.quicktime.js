@@ -11,43 +11,22 @@
  */
 
 
-/* define function that adds another function as a DOM event listener */
-    function myAddListener(obj, evt, handler, captures)
-        {
-        if ( document.addEventListener )
-            obj.addEventListener(evt, handler, captures);
-        else
-            // IE
-            obj.attachEvent('on' + evt, handler);
-       }
- 
-   /* define functions that register each listener */
-    function RegisterListener(eventName, objID, embedID, listenerFcn)
-    {
-        var obj = document.getElementById(objID);
-        if ( !obj )
-            obj = document.getElementById(embedID);
-        if ( obj )
-            myAddListener(obj, eventName, listenerFcn, false);
-    }
- 
-    /* define a single function that registers all listeners to call onload */
-    // function RegisterListeners()
-    // {
-    //    RegisterListener('qt_progress', 'movie1', 'qtmovie_embed', showProgress);
-    //    RegisterListener('qt_load', 'movie1', 'qtmovie_embed', movieLoaded);
-    // }
-
 videojs.Quicktime = videojs.MediaTechController.extend({
   init: function(player, options, ready){
     console.log("init", player, options, ready);
     videojs.MediaTechController.call(this, player, options, ready);
+
+    console.log("this",this);
     
+    console.log("player", this.id_);
     console.log(this);
-    // this.features.fullscreenResize = true;
+    this.features.fullscreenResize = false;
     
     this.player_ = player;
-    this.player_el_ = document.getElementById(this.player_.id());
+    console.log("player controls",player.controls());
+    // this.player_.controls(true);
+    // this.controls(true);
+    // this.player_el_ = document.getElementById(this.player_.id());
 
     console.log(this.player_el_);
 
@@ -55,8 +34,11 @@ videojs.Quicktime = videojs.MediaTechController.extend({
 
     console.log("controls", this.player_.controls());
     console.log("controls", this.player_.controlBar);
+
+    // this.player_.addChild('controlBar');
+
     // window.controlbar = this.player_.controlBar.el();
-    window.player = this;
+    window.myplayer = this;
     // Disable lockShowing because YouTube controls are there
     // if (this.player_.options().ytcontrols){
     //   this.player_.controls(false);
@@ -149,34 +131,54 @@ videojs.Quicktime = videojs.MediaTechController.extend({
     // }
 
     // this.loadQuicktime();
+    var parentEl = options['parentEl'];
+
+    var objId = player.id() + '_quicktime';
+
+    var source = player.options().src;
+
+    // TODO: options
 
     // Load quicktime object 
-    function makeQT()
-    {
-        var txt = _QTGenerate("QT_WriteOBJECT", false, arguments);
-        return txt;
+    function makeQT(){
+        return _QTGenerate("QT_WriteOBJECT", false, arguments);
     }
-    var objectstring = makeQT(player.options().src, player.options().width, player.options().height, '', 'SCALE', 'tofit', 'obj#ID', 'video', 'emb#name', 'video', 'postdomevents', 'true', 'enablejavascript', 'true', 'autoplay', 'false') ;
-    console.log(objectstring);
+    var qt_object = makeQT(
+      player.options().src, player.options().width, player.options().height, ''
+      , 'scale', 'tofit'
+      , 'postdomevents', 'true'
+      , 'enablejavascript', 'true'
+      , 'controller', 'false'
+      , 'autoplay', 'false'
+      , 'href', 'javascript:function(){}'
+    );
+    console.log(qt_object);
 
-    var quicktime_player = document.createElement("div");
-    quicktime_player.innerHTML = objectstring;
+    parentEl.innerHTML = qt_object;
 
-    console.log(this.player_el_.firstchild);
-    
-    // this.player_el_.insertBefore(quicktime_player[0], this.player_el_.firstChild);
-    this.player_el_.innerHTML = objectstring;
-
-
-    this.qtplayer = document.video;
-    // console.log("qtplayer", this.qtplayer);
+    // Get video embed in object
+    this.qtplayer = this.el_ = parentEl.firstChild.lastChild;
 
     // this.onReady();
     // console.log("loaded");
-    var me = this;
+    var self = this;
 
-    RegisterListener('qt_load', 'video', 'video', function() {
-      me.onReady();
+    this.onQtEvent('qt_canplay', function() {
+      self.onReady();
+    });
+
+    this.onQtEvent('qt_ended', function() {
+      console.log("qt ended");
+      self.player_.trigger('ended');
+      self.player_.trigger('pause');
+    });
+
+    this.onQtEvent('qt_timechanged', function() {
+      console.log("qt timechanged");
+      // me.player_.trigger('timeupdate');
+    });
+    this.onQtEvent('qt_error', function() {
+      self.onError();
     });
   }
 });
@@ -190,19 +192,22 @@ videojs.Quicktime.prototype.play = function(){
   console.log("play");
   if (this.isReady_){
     this.qtplayer.Play();
+    this.player_.trigger('play');
   } else { 
     // We will play it when the API will be ready
     this.playOnReady = true;
   }
 };
 
-videojs.Quicktime.prototype.pause = function(){ this.qtplayer.Stop(); };
-videojs.Quicktime.prototype.paused = function(){
-  return this.qtplayer.GetRate() == 0;
+videojs.Quicktime.prototype.pause = function(){
+  this.qtplayer.Stop();
+  this.player_.trigger('pause');
 };
 
+videojs.Quicktime.prototype.paused = function(){ return this.qtplayer.GetRate() === 0; };
+
 videojs.Quicktime.prototype.currentTime = function(seconds){
-  console.log("Current Time", this.qtplayer.GetTime());
+  console.log("Current Time", this.qtplayer.GetTime(), "duration", this.qtplayer.GetDuration());
   return this.qtplayer.GetTime() / this.qtplayer.GetTimeScale();
 };
 
@@ -215,6 +220,7 @@ videojs.Quicktime.prototype.duration = function(){
   console.log("Duration", this.qtplayer.GetDuration() / this.qtplayer.GetTimeScale());
   return this.qtplayer.GetDuration() / this.qtplayer.GetTimeScale();
 };
+
 videojs.Quicktime.prototype.buffered = function(){
   var loadedBytes = this.qtplayer.GetMaxBytesLoaded();
   var totalBytes = this.qtplayer.GetMovieSize();
@@ -245,115 +251,37 @@ videojs.Quicktime.prototype.muted = function() {
   console.log("Mute", this.qtplayer.GetMute());
   return this.qtplayer.GetMute();
 };
+
 videojs.Quicktime.prototype.setMuted = function(muted) { 
   if (muted) {
-    this.qtplayer.SetMute(true); 
+    this.qtplayer.SetMute(true);
   } else { 
-    this.qtplayer.SetMute(false); 
-  } 
-
+    this.qtplayer.SetMute(false);
+  }
   var self = this;
   setTimeout(function() { self.player_.trigger('volumechange'); }, 50);
 };
 
+videojs.Quicktime.prototype.ended = function(){ return this.qtplayer.GetTime() === this.qtplayer.GetDuration(); };
+
 videojs.Quicktime.prototype.onReady = function(){
-  console.log("readying");
+  console.log("readying", this);
   this.isReady_ = true;
   this.player_.trigger('techready');
-
-  console.log("readied");
 
   // Hide the poster when ready because YouTube has it's own
   this.triggerReady();
   this.player_.trigger('durationchange');
 
-  console.log("durationchange");
-  
   // Play right away if we clicked before ready
-  // if (this.playOnReady){
-  //   this.ytplayer.playVideo();
-  // }
-};
-
-videojs.Quicktime.prototype.onStateChange = function(state){
-  if (state != this.lastState){
-    switch(state){
-      case -1:
-        this.player_.trigger('durationchange');
-        break;
-
-      case YT.PlayerState.ENDED:
-        this.player_.trigger('ended');
-        break;
-
-      case YT.PlayerState.PLAYING:
-        this.player_.trigger('timeupdate');
-        this.player_.trigger('durationchange');
-        this.player_.trigger('playing');
-        this.player_.trigger('play');
-        break;
-
-      case YT.PlayerState.PAUSED:
-        this.player_.trigger('pause');
-        break;
-
-      case YT.PlayerState.BUFFERING:
-        this.player_.trigger('timeupdate');
-        this.player_.trigger('waiting');
-        break;
-
-      case YT.PlayerState.CUED:
-        break;
-    }
-
-    this.lastState = state;
+  if (this.playOnReady){
+    this.qtplayer.Play();
   }
-};
-
-videojs.Quicktime.prototype.onPlaybackQualityChange = function(quality){
-  switch(quality){
-    case 'medium':
-      this.player_.videoWidth = 480;
-      this.player_.videoHeight = 360;
-      break;
-
-    case 'large':
-      this.player_.videoWidth = 640;
-      this.player_.videoHeight = 480;
-      break;
-
-    case 'hd720':
-      this.player_.videoWidth = 960;
-      this.player_.videoHeight = 720;
-      break;
-
-    case 'hd1080':
-      this.player_.videoWidth = 1440;
-      this.player_.videoHeight = 1080;
-      break;
-
-    case 'highres':
-      this.player_.videoWidth = 1920;
-      this.player_.videoHeight = 1080;
-      break;
-
-    case 'small':
-      this.player_.videoWidth = 320;
-      this.player_.videoHeight = 240;
-      break;
-
-    default:
-      this.player_.videoWidth = 0;
-      this.player_.videoHeight = 0;
-      break;
-  }
-
-  this.player_.trigger('ratechange');
 };
 
 videojs.Quicktime.prototype.onError = function(error){
-  this.player_.error = error;
-  this.player_.trigger('error');
+    this.player_.error = "Quicktime Error";
+    this.player_.trigger('error');
 };
 
 videojs.Quicktime.isSupported = function(){
@@ -365,34 +293,19 @@ videojs.Quicktime.prototype.supportsFullScreen = function() {
 };
 
 videojs.Quicktime.canPlaySource = function(srcObj){
-  return (srcObj.type == 'video/youtube');
+  return (srcObj.type === 'video/quicktime');
 };
-
-// All videos created before YouTube API is loaded
-videojs.Quicktime.loadingQueue = [];
 
 // Create the YouTube player
 videojs.Quicktime.prototype.loadQuicktime = function(){
-  // this.ytplayer = new YT.Player(this.id_, {
-  //   events: {
-  //     onReady: function(e) { e.target.vjsTech.onReady(); },
-  //     onStateChange: function(e) { e.target.vjsTech.onStateChange(e.data); },
-  //     onPlaybackQualityChange: function(e){ e.target.vjsTech.onPlaybackQualityChange(e.data); },
-  //     onError: function(e){ e.target.vjsTech.onError(e.data); }
-  //   }
-  // });
-
-  // this.ytplayer.vjsTech = this;
+  // this.qtplayer.vjsTech = this;
 };
 
-videojs.Quicktime.makeQueryString = function(args){
-  var array = [];
-  for (var key in args){
-    if (args.hasOwnProperty(key)){
-      array.push(encodeURIComponent(key) + '=' + encodeURIComponent(args[key]));
-    }
-  }
-
-  return array.join('&');
-};
+/* Define function that adds another function as a DOM event listener */
+videojs.Quicktime.prototype.onQtEvent = function(event, handler){
+  if (document.addEventListener)
+    this.qtplayer.addEventListener(event, handler);
+  else
+    this.qtplayer.attachEvent('on' + evt, handler);  // IE
+}
 
