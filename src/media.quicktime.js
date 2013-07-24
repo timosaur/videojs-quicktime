@@ -21,39 +21,25 @@ videojs.Quicktime = videojs.MediaTechController.extend({
 
     this.player_ = player;
 
-    // Disable lockShowing because YouTube controls are there
-    // if (this.player_.options().ytcontrols){
-    //   this.player_.controls(false);
-    // }
-
-    // // Make autoplay work for iOS
-    // if (this.player_.options().autoplay) {
-    //   this.playOnReady = true;
-    // }
-    
-    // if (this.player_.options().ytcontrols){
-    //   // Remove the big play button and the control bar, we use Vimeo controls
-    //   // Doesn't exist right away because the DOM hasn't created it
-    //   var self = this;
-    //   setTimeout(function(){ 
-    //     var bigPlayDom = self.player_.bigPlayButton.el();
-    //     bigPlayDom.parentNode.removeChild(bigPlayDom);
-        
-    //     var controlBarDom = self.player_.controlBar.el();
-    //     controlBarDom.parentNode.removeChild(controlBarDom);
-    //   }, 50);
-    // }
-
     this.parent_el_ = options['parentEl'];
 
-    var source = options['source'];
-    if (source)
-      source = source.src;
-    else
-      source = player.options().src;
+    var src;
+    if (typeof player.options().src === 'undefined') {
+      var sources = player.options().sources,
+          i = 0;
+      while (i < sources.length) {
+        if (typeof sources[i].type !== 'undefined' && 'video/quicktime' == sources[i].type) {
+          src = sources[i].src;
+          break;
+        }
+        i++;
+      }
+    } else {
+      src = player.options().src;
+    }
 
-    if (source)
-      this.loadQuicktime(source);
+    if (src)
+      this.loadQuicktime(src);
   }
 });
 
@@ -221,9 +207,10 @@ videojs.Quicktime.prototype.loadQuicktime = function(src){
   this.onQtEvent('qt_error', videojs.bind(this, this.onError));
   this.onQtEvent('qt_ended', videojs.bind(this, this.onEnded));
 
+  var self = this;
   this.onQtEvent('qt_timechanged', function() {
     console.log("qt timechanged");
-    me.player_.trigger('timeupdate');
+    self.player_.trigger('timeupdate');
   });
 };
 
