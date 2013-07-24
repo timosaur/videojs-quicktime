@@ -45,7 +45,15 @@ videojs.Quicktime = videojs.MediaTechController.extend({
     // }
 
     this.parent_el_ = options['parentEl'];
-    this.loadQuicktime();
+
+    var source = options['source'];
+    if (source)
+      source = source.src;
+    else
+      source = player.options().src;
+
+    if (source)
+      this.loadQuicktime(source);
   }
 });
 
@@ -144,6 +152,10 @@ videojs.Quicktime.canPlaySource = function(srcObj){
   return (srcObj.type === 'video/quicktime');
 };
 
+videojs.Quicktime.prototype.src = function(src){
+  this.qtplayer.SetURL(src);
+};
+
 // Events
 videojs.Quicktime.prototype.onReady = function(){
   console.log("readying", this);
@@ -172,7 +184,7 @@ videojs.Quicktime.prototype.onEnded = function(){
 };
 
 // Create the Quicktime player
-videojs.Quicktime.prototype.loadQuicktime = function(){
+videojs.Quicktime.prototype.loadQuicktime = function(src){
   var player = this.player_;
   // var objId = player.id() + '_quicktime';
 
@@ -183,7 +195,7 @@ videojs.Quicktime.prototype.loadQuicktime = function(){
       return _QTGenerate("QT_WriteOBJECT", false, arguments);
   }
   var qt_object = makeQT(
-    player.options().src, player.options().width, player.options().height, ''
+    src, player.options().width, player.options().height, ''
     , 'scale', 'tofit'
     , 'postdomevents', 'true'
     , 'enablejavascript', 'true'
